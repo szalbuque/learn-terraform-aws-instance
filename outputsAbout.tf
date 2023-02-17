@@ -1,0 +1,1 @@
+# contains outputs from the resources generated in main.tf
