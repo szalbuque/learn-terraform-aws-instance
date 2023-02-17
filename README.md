@@ -1,1 +1,3 @@
-# learn-terraform-aws-instance
+# Repository with files used to learn Terraform + AWS
+
+
