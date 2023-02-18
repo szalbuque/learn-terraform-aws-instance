@@ -1,114 +1,51 @@
-# call modules, locals and data-sources to create all the resources
-
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.16"
-    }
-  }
-
-  required_version = ">= 1.2.0"
-}
+# configures the AWS provider
 
 provider "aws" {
   region = "us-west-2"
-}
 
-# Create a VPC
-resource "aws_vpc" "dio-exercise-vpc" {
-  cidr_block = "10.0.0.0/16"
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "dio_exercise_vpc"
+  default_tags {
+    tags = {
+      hashicorp-learn = "module-use"
+    }
   }
 }
 
-# Create public subnet
-resource "aws_subnet" "dio-exercise-subnet"{
-  vpc_id = aws_vpc.dio-exercise-vpc.id
-  cidr_block = "10.0.1.0/24"
+/*
+configures a Virtual Private Cloud (VPC) module, which provisions networking resources
+such as a VPC, subnets, and internet and NAT gateways based on the arguments provided.
+*/
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "3.18.1"
 
-  tags = {
-    Name = "dio_exercise_subnet"
-  }
+  name = var.vpc_name
+  cidr = var.vpc_cidr
+
+  azs             = var.vpc_azs
+  private_subnets = var.vpc_private_subnets
+  public_subnets  = var.vpc_public_subnets
+
+  enable_nat_gateway = var.vpc_enable_nat_gateway
+
+  tags = var.vpc_tags
 }
 
-# Create Internet Gateway
-resource "aws_internet_gateway" "dio-exercise-gateway" {
-  vpc_id = aws_vpc.dio-exercise-vpc.id
+#  defines three EC2 instances provisioned within the VPC created by the module.
 
-  tags = {
-    Name = "dio_exercise_gateway"
-  }
-}
+module "ec2_instances" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "4.3.0"
 
-# Create route table
-resource "aws_route_table" "dio-exercise-rt" {
-  vpc_id = aws_vpc.dio-exercise-vpc.id
+  count = 3
+  name  = "my-ec2-cluster-${count.index}"
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.dio-exercise-gateway.id
-  }
-
-  tags = {
-    Name = "dio-exercise-rt"
-  }
-}
-
-# Create default route
-resource "aws_route" "dio-exercise-drt" {
-  route_table_id            = aws_route_table.dio-exercise-rt.id
-  destination_cidr_block    = "0.0.0.0/0"
-  gateway_id                = aws_internet_gateway.dio-exercise-gateway.id
-}
-
-# Link subnet to route table
-resource "aws_route_table_association" "dio-exercise-pub-link" {
-  subnet_id      = aws_subnet.dio-exercise-subnet.id
-  route_table_id = aws_route_table.dio-exercise-rt.id
-}
-
-resource "aws_key_pair" "TF_key" {
-  key_name = "TF_key"
-  public_key = tls_private_key.rsa.public_key_openssh
-}
-
-resource "tls_private_key" "rsa" {
-  algorithm = "RSA"
-  rsa_bits = 4096
-}
-
-resource "local_file" "TF_key" {
-  content = tls_private_key.rsa.private_key_pem
-  filename = "tfkey"
-}
-
-resource "aws_instance" "bastion" {
-  ami                    = "ami-830c94e3"
+  ami                    = "ami-0c5204531f799e0c6"
   instance_type          = "t2.micro"
-  vpc_security_group_ids = ["sg-054b8cfc266c5041d"]
-  subnet_id              = aws_subnet.dio-exercise-subnet.id
-  associate_public_ip_address = true
-  key_name = "TF_key"
+  vpc_security_group_ids = [module.vpc.default_security_group_id]
+  subnet_id              = module.vpc.public_subnets[0]
 
   tags = {
-    Name = "bastion host"
+    Terraform   = "true"
+    Environment = "dev"
   }
 }
-
-resource "aws_instance" "app" {
-  count                  = 3
-  ami                    = "ami-830c94e3"
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = ["sg-054b8cfc266c5041d"]
-  subnet_id              = aws_subnet.dio-exercise-subnet.id
-  key_name = "TF_key"
-
-  tags = {
-    Name = "app${count.index}"
-  }
-}
-
