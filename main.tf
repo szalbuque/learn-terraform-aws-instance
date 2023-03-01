@@ -41,6 +41,7 @@ module "ec2_instances" {
 
   ami                    = "ami-0c5204531f799e0c6"
   instance_type          = "t2.micro"
+  key_name                = "user1"
   vpc_security_group_ids = [module.vpc.default_security_group_id]
   subnet_id              = module.vpc.public_subnets[0]
 

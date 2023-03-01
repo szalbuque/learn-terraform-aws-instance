@@ -4,6 +4,9 @@
 # and environment variables. When you declare them in child modules, the calling module should pass values 
 # in the module block.
 
+
+# Variables for VPC resource
+
 variable "vpc_name" {
   description = "Name of VPC"
   type        = string
@@ -47,4 +50,30 @@ variable "vpc_tags" {
     Terraform   = "true"
     Environment = "dev"
   }
+}
+
+# Variables for key pair resource
+
+variable "key_name" {
+  description = "The name for the key pair. "
+  type        = string
+  default     = "example-key-pair"
+}
+
+variable "public_key" {
+  description = "The public key material"
+  type        = string
+  default     = ""
+}
+
+variable "private_key_algorithm" {
+  description = "Name of the algorithm to use when generating the private key. Currently-supported values are `RSA` and `ED25519`"
+  type        = string
+  default     = "RSA"
+}
+
+variable "private_key_rsa_bits" {
+  description = "When algorithm is `RSA`, the size of the generated RSA key, in bits (default: `4096`)"
+  type        = number
+  default     = 4096
 }
